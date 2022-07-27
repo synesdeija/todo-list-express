@@ -6,7 +6,7 @@ require('dotenv').config() //Broken down into 2 parts: We're first importing env
 require('dotenv').config()
     //the above are dependences needed
 
-let db, //sets variable of db, giving it a name. 'quality of life' variables lol
+let db, //sets GLOBAL variable of db, giving it a name. 'quality of life' variables lol. available inside other functions for super ease.
     dbConnectionStr = process.env.DB_STRING, //states connection string needed from our MongoDB, but that it is hidden in a .env file, so it accesses the .env
     dbName = 'todo' //states that the dbname is 'todo', is a variable.
 
@@ -18,42 +18,54 @@ MongoClient.connect(dbConnectionStr, { useUnifiedTopology: true }) //connect to 
     .catch(err => console.error(err)
 
         app.set('view engine', 'ejs') //sets ejs as the rendering engine, and lets express know (the 'view engine')
-        app.use(express.static('public')) app.use(express.urlencoded({ extended: true })) app.use(express.json())
+        app.use(express.static('public')) //serves up the folder called 'public' as is
+        app.use(express.urlencoded({ extended: true })) // middleware that intercepts reqs and res's - allows data to be passed to server via request...(https://localhost/route?variable=value&othervariable=othervalue) like when we first learned how to use API's!
+        app.use(express.json()) //middleware - telling express to accept data in json, which basically tells it to learn it. load the json body parser for incoming requests.
 
 
-        app.get('/', async(request, response) => {
+        app.get('/', async(request, response) => { //a 'get' method, sent to the root of the server. so...when the server 'gets' the request, it will do the below.
             const todoItems = await db.collection('todos').find().toArray()
-            const itemsLeft = await db.collection('todos').countDocuments({ completed: false })
+                //// creating a variable to hold the accessed database collection from Mongo, in this case, the 'todo', and the empty () on .find say, FIND IT ALL! and then put it into an array.
+            const itemsLeft = await db.collection('todos')
+                .countDocuments({ completed: false })
+                //returns a count of the number of records with the 'completed' field set to false
             response.render('index.ejs', { items: todoItems, left: itemsLeft })
         })
+        //set shorter, easier variables for the database records we accessed above. then we tell express to render those records, into .ejs for transfer, then we send that rendered, neat data to the client (as HTML)
+        // express passes the data from the above two queries into the .ejs file (the template)
 
-        app.post('/addTodo', (request, response) => {
-            db.collection('todos').insertOne({ thing: request.body.todoItem, completed: false })
-                .then(result => {
+
+
+        app.post('/addTodo', (request, response) => { //post method for receiving a new 'todo' item. 
+            db.collection('todos').insertOne({ thing: request.body.todoItem, completed: false }) //adding the new record to the db, with the completed field marked as 'false'
+                .then(result => { //console log (via Heroku)that the 'todo' was added, then refresh the page. //Will set every new item created by the user as false so it will trigger the promise from before // //Handles returned promise, console log into heroku not the browser of the user
                     console.log('Todo Added')
                     response.redirect('/')
                 })
                 .catch(error => console.error(error))
         })
+        //logs an error to the console, if one occurs
 
-        app.put('/markComplete', (request, response) => {
-            db.collection('todos').updateOne({ thing: request.body.itemFromJS }, {
-                    $set: {
-                        completed: true
-                    }
-                }, {
-                    sort: { _id: -1 },
-                    upsert: false
-                })
+        app.put('/markComplete', (request, response) => { //defining an endpoint to handle a PUT req.
+            db.collection('todos').updateOne({ thing: request.body.itemFromJS }, //updates a record, using value received from 'itemFromJS' in the body of the request. 
+
+                    {
+                        $set: {
+                            completed: true // sets the instance as completed
+                        }
+                    }, {
+                        sort: { _id: -1 }, //add it to the bottom of the array
+                        upsert: false //update the newest document if multiple exist. if not, create a new record. 
+                    })
                 .then(result => {
                     console.log('Marked Complete')
                     response.json('Marked Complete')
-                })
-                .catch(error => console.error(error))
+                }) //if successful, console log! send the info in json.
+                .catch(error => console.error(error)) //if there is an error, console log it as such.
 
         })
 
-        app.put('/markUnComplete', (request, response) => {
+        app.put('/markUnComplete', (request, response) => { // does the opposite of the previous request. 
             db.collection('todos').updateOne({ thing: request.body.itemFromJS }, {
                     $set: {
                         completed: false
@@ -70,16 +82,16 @@ MongoClient.connect(dbConnectionStr, { useUnifiedTopology: true }) //connect to 
 
         })
 
-        app.delete('/deleteItem', (request, response) => {
-            db.collection('todos').deleteOne({ thing: request.body.itemFromJS })
+        app.delete('/deleteItem', (request, response) => { //handles a delete req at the defined endpoint.
+            db.collection('todos').deleteOne({ thing: request.body.itemFromJS }) //Mongo function to delete a record from the 'todo'collection.
                 .then(result => {
-                    console.log('Todo Deleted')
+                    console.log('Todo Deleted') //console log if successful
                     response.json('Todo Deleted')
                 })
-                .catch(error => console.error(error))
+                .catch(error => console.error(error)) //if it fails, it will be logged.
 
         })
 
         app.listen(process.env.PORT || PORT, () => {
             console.log(`Server running on port ${PORT}`)
-        })
+        }) //tells the server to begin listening. activation code.
