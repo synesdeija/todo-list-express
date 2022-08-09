@@ -3,8 +3,8 @@ const app = express() // the applicaiton is written in express
 const MongoClient = require('mongodb').MongoClient //we will be connecting to server with database using MongoDB as a client module, so needs MongoDB
 const PORT = 2121 //will run locally on port 2121--tells express to listen to this port also.
 require('dotenv').config() //Broken down into 2 parts: We're first importing env and then loading using .config()
-require('dotenv').config()
-    //the above are dependences needed
+
+//the above are dependences needed
 
 let db, //sets GLOBAL variable of db, giving it a name. 'quality of life' variables lol. available inside other functions for super ease.
     dbConnectionStr = process.env.DB_STRING, //states connection string needed from our MongoDB, but that it is hidden in a .env file, so it accesses the .env
@@ -50,8 +50,8 @@ MongoClient.connect(dbConnectionStr, { useUnifiedTopology: true }) //connect to 
             db.collection('todos').updateOne({ thing: request.body.itemFromJS }, //updates a record, using value received from 'itemFromJS' in the body of the request. 
 
                     {
-                        $set: {
-                            completed: true // sets the instance as completed
+                        $set: { //To update a document, MongoDB provides update operators such as $set to modify field values.
+                            completed: true // sets the record as completed
                         }
                     }, {
                         sort: { _id: -1 }, //add it to the bottom of the array
@@ -67,7 +67,7 @@ MongoClient.connect(dbConnectionStr, { useUnifiedTopology: true }) //connect to 
 
         app.put('/markUnComplete', (request, response) => { // does the opposite of the previous request. 
             db.collection('todos').updateOne({ thing: request.body.itemFromJS }, {
-                    $set: {
+                    $set: { //To update a document, MongoDB provides update operators such as $set to modify field values.
                         completed: false
                     }
                 }, {
